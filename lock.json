@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "frozen_at": "2026-10-28",
+  "pins": {
+    "langfuse_web": {
+      "ref": "langfuse/langfuse:4",
+      "version": "4.70.1",
+      "digest": "sha256:71b04842ecff8fe0dd15c7bbb1acd6e0555735e393a8108c43feb4b8d0adf9e6",
+      "origin": "upstream"
+    },
+    "langfuse_worker": {
+      "ref": "langfuse/langfuse-worker:4",
+      "version": "4.70.1",
+      "digest": "sha256:3976a73de84a29999ff4573398e240127b8a92012421ce5eec61cd57f087d8ca",
+      "origin": "upstream"
+    },
+    "clickhouse": {
+      "ref": "clickhouse/clickhouse-server:25.12-alpine",
+      "version": "25.12.11.4",
+      "digest": "sha256:7d93fb39bb2bfc8509bd621241db974e41041ac0ae626a5b06e172431fc709f7",
+      "origin": "upstream"
+    },
+    "minio": {
+      "ref": "bitnamilegacy/minio:latest",
+      "version": "latest",
+      "digest": "sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c",
+      "origin": "upstream"
+    },
+    "postgres": {
+      "ref": "library/postgres:16",
+      "version": "16",
+      "digest": "sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d",
+      "origin": "upstream"
+    },
+    "redis": {
+      "ref": "library/redis:7-alpine",
+      "version": "7",
+      "digest": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+      "origin": "upstream"
+    }
+  },
+  "compose": {
+    "upstream": "github.com/langfuse/langfuse",
+    "upstream_commit": "7526ede92399d7e04235b581b12470a401aaf5d7",
+    "license": "MIT",
+    "note": "docker-compose.yml 为上游原文快照，其余三份是本仓自有资产；sha256 变动即视为手工改动",
+    "files": {
+      "docker-compose.yml": "9885a19723b976dcc143360859b3b15dcb7a12372305593890fc3e3e8938eeeb",
+      "docker-compose.isolation.yml": "f0e075bb3a388f856f80a8680926791d5d23781fe31acb204164f00f29fa1609",
+      "docker-compose.patch.yml": "affafc5fe216179e5439478efdff6f8394d30318f61e14d361674a7cfcaad6ca",
+      "clickhouse-skip-checksum.xml": "984dfd65e1c4ad01a932e0e6e011356de51b6dba6c021c0b977af7918674f091"
+    }
+  },
+  "artifacts": {
+    "clickhouse_patch": {
+      "source_image": "clickhouse",
+      "source_sha256": "16c6f4c6a6e577adbe3cfae10eea643b1702bfa21414f9982d30fe24ac16d7ab",
+      "output_sha256": "6f8872fc20d8829045d050f3b4947f34bb2f9f671a39ce36f8bae3b47df60291",
+      "size_bytes": 706962096,
+      "patcher": "1.0.0",
+      "scan_scope": "all-executable-pt-load",
+      "sites": {
+        "ldapr_x": 211821,
+        "ldapr_w": 1013,
+        "ldaprb": 14260,
+        "ldaprh": 1,
+        "total": 227095
+      },
+      "requires": {
+        "machine": "aarch64",
+        "rcpc": false
+      }
+    }
+  }
+}

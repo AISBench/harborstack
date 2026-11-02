@@ -1,0 +1,65 @@
+# ============================================================
+# harborstack 标准配置（仓库内默认值）
+# 优先级：CLI --set > 环境变量 HARBORSTACK_A__B > 本文件 > 内置默认
+# 环境变量用双下划线表达层级，例如 HARBORSTACK_PORTS__WEB=19000
+# ============================================================
+
+[stack]
+# compose 项目名 = harborstack-<env>；同一台机器上不同用户/用途用不同 env 隔离
+env = "default"
+
+[platform]
+# aarch64 且 CPU 无 rcpc 时，是否允许对 ClickHouse 二进制做穿刺
+allow_patch = true
+
+[paths]
+# 本地 harbor 仓（run 只调用它的 CLI，不复制其配置）
+harbor_repo = "~/code/harbor"
+# 二进制与镜像缓存，跨项目复用
+cache_dir = "~/.cache/harborstack"
+# 运行期状态、日志、report.json
+var_dir = "./var"
+
+[ports]
+# 分配器从这个区间里挑可用端口（只绑 127.0.0.1）
+range = [18900, 18999]
+preferred = { web = 18930 }
+
+[langfuse]
+image = "langfuse/langfuse:4"
+worker_image = "langfuse/langfuse-worker:4"
+memory = "2g"
+cpus = 2.0
+# default：使用下方固定口令（仅适合只绑回环的调试形态）
+# generated：首次 init 生成随机密钥写入 var/secrets.json（0600），var/.env 为其派生
+security_mode = "default"
+admin = { email = "admin@harborstack.local", name = "admin", password = "ChangeMe-Harborstack1" }
+
+[clickhouse]
+image = "clickhouse/clickhouse-server:25.12-alpine"
+bin_cache = true
+
+[minio]
+image = "bitnamilegacy/minio:latest"
+
+[postgres]
+image = "library/postgres:16"
+
+[redis]
+image = "library/redis:7-alpine"
+
+[image]
+# docker hub 直连不可用时的镜像代理前缀，留空则用原 ref
+mirror = "docker.1ms.run"
+
+[export]
+mode = "full"
+idempotent = true
+
+[bundle]
+dir = "/share/harborstack-bundle"
+mode = "docker-save"        # docker-save | oci
+include_patched_bin = true
+
+[report]
+path = "./var/report.json"

@@ -1,0 +1,28 @@
+harbor-otel-stack
+Copyright 2026 ivanbao9783
+
+This product includes software developed by third parties:
+
+harbor
+  https://github.com/ivanbao9783/harbor
+  Licensed under the Apache License, Version 2.0.
+
+Langfuse
+  https://github.com/langfuse/langfuse
+  Langfuse core is licensed under the MIT License. Compose assets in this
+  repository are adapted from the upstream project. Official container
+  images are redistributed unmodified as part of the optional offline
+  bundle; any enterprise components within those images remain subject to
+  their upstream terms.
+
+ClickHouse
+  https://github.com/ClickHouse/ClickHouse
+  Licensed under the Apache License, Version 2.0.
+  The aarch64 server binary distributed in the optional offline bundle is
+  modified: LDAPR-family instructions are rewritten to LDAR-family
+  instructions so that the binary runs on CPUs without the RCpc extension.
+  The patch and its build inputs are recorded in lock.json.
+
+OpenTelemetry Python
+  https://github.com/open-telemetry/opentelemetry-python
+  Licensed under the Apache License, Version 2.0.

@@ -1,0 +1,127 @@
+{
+    "id": "faf115cc-912c-40f2-9851-c237bd242bae",
+    "task_name": "terminal-bench/path-tracing-reverse",
+    "trial_name": "path-tracing-reverse__CmFT8TK",
+    "trial_uri": "file:///workspace/harbor-otel-stack/var/runs/20261028-090318-f458ab/hs-path-trace-llm/path-tracing-reverse__CmFT8TK",
+    "task_id": {
+        "path": "/workspace/tasks/path-tracing-reverse"
+    },
+    "source": null,
+    "task_checksum": "d8b2b23c7466b038162a141255c298df45d7aebf37d4bd62d43dd67a7802b421",
+    "config": {
+        "task": {
+            "path": "/workspace/tasks/path-tracing-reverse",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": null
+        },
+        "trial_name": "path-tracing-reverse__CmFT8TK",
+        "trials_dir": "/workspace/harbor-otel-stack/var/runs/20261028-090318-f458ab/hs-path-trace-llm",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "jiuwenswarm",
+            "import_path": null,
+            "model_name": "deepseek/deepseek-flash",
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {},
+            "env": {
+                "UV_DEFAULT_INDEX": "https://repo.huaweicloud.com/repository/pypi/simple"
+            },
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "6366f4bb-fadd-4b52-9bb7-16e72943f97a",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "jiuwenswarm",
+        "version": "0.2.5b1",
+        "model_info": {
+            "name": "deepseek-flash",
+            "provider": "deepseek"
+        }
+    },
+    "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": null
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": 0.0
+        }
+    },
+    "verifier_environment_mode": "shared",
+    "exception_info": {
+        "exception_type": "NonZeroAgentExitCodeError",
+        "exception_message": "jiuwenswarm run failed (status='failed', code='RUNTIME_ERROR'): [181001] model call failed, reason: openAI API async stream error: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance (request_id: 682212c9-1031-4df5-b090-2a444209e0ba)', 'type': 'insufficient_balance_error', 'param': None, 'code': 'invalid_request_error'}} details={}",
+        "exception_traceback": "Traceback (most recent call last):\n  File \"/workspace/code/harbor-jiuwenswarm/src/harbor/agents/installed/jiuwenswarm.py\", line 385, in run\n    await self.exec_as_agent(\n    ...<4 lines>...\n    )\n  File \"/workspace/code/harbor-jiuwenswarm/src/harbor/agents/installed/base.py\", line 1081, in exec_as_agent\n    return await self._exec(\n           ^^^^^^^^^^^^^^^^^\n        environment, command, env=env, cwd=cwd, timeout_sec=timeout_sec\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/workspace/code/harbor-jiuwenswarm/src/harbor/agents/installed/base.py\", line 1048, in _exec\n    raise self._classify_exec_error(command, result)\nharbor.agents.installed.base.NonZeroAgentExitCodeError: Command failed (exit 1): /installed-agent/jiuwenswarm/.venv/bin/python /installed-agent/jiuwenswarm_runner.py --request /logs/agent/request.json --events /logs/agent/events.jsonl --result /logs/agent/result.json\nstdout: None\nstderr: None\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/workspace/code/harbor-jiuwenswarm/src/harbor/trial/single_step.py\", line 76, in _run_agent\n    await self._run_agent_phase(\n    ...<5 lines>...\n    )\n  File \"/workspace/code/harbor-jiuwenswarm/src/harbor/trial/trial.py\", line 651, in _run_agent_phase\n    await asyncio.wait_for(\n    ...<6 lines>...\n    )\n  File \"/workspace/.local/share/uv/python/cpython-3.13.16-linux-aarch64-gnu/lib/python3.13/asyncio/tasks.py\", line 514, in wait_for\n    return await fut\n           ^^^^^^^^^\n  File \"/workspace/code/harbor-jiuwenswarm/src/harbor/agents/installed/base.py\", line 194, in wrapper\n    return await fn(self, instruction, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/code/harbor-jiuwenswarm/src/harbor/agents/installed/jiuwenswarm.py\", line 398, in run\n    raise self._classify_terminal(terminal) from exc\nharbor.agents.installed.base.NonZeroAgentExitCodeError: jiuwenswarm run failed (status='failed', code='RUNTIME_ERROR'): [181001] model call failed, reason: openAI API async stream error: APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance (request_id: 682212c9-1031-4df5-b090-2a444209e0ba)', 'type': 'insufficient_balance_error', 'param': None, 'code': 'invalid_request_error'}} details={}\n",
+        "occurred_at": "2026-10-28T09:14:11.905692Z"
+    },
+    "started_at": "2026-10-28T09:03:20.217548Z",
+    "finished_at": "2026-10-28T09:14:48.908927Z",
+    "environment_setup": {
+        "started_at": "2026-10-28T09:03:20.470716Z",
+        "finished_at": "2026-10-28T09:03:22.383636Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-10-28T09:03:22.383885Z",
+        "finished_at": "2026-10-28T09:13:30.715125Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-10-28T09:13:30.715881Z",
+        "finished_at": "2026-10-28T09:14:11.897417Z"
+    },
+    "verifier": {
+        "started_at": "2026-10-28T09:14:12.789863Z",
+        "finished_at": "2026-10-28T09:14:30.049304Z"
+    },
+    "step_results": null
+}

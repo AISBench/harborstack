@@ -1,0 +1,8 @@
+<!--
+  穿刺后的 clickhouse 二进制与镜像内记录的参考校验和不一致，
+  ClickHouse 会拒绝启动（CORRUPTED_DATA）。这里只对本容器关闭该项检查。
+  作用域：/etc/clickhouse-server/config.d/，仅影响本 compose 项目。
+-->
+<clickhouse>
+    <skip_binary_checksum_checks>1</skip_binary_checksum_checks>
+</clickhouse>
