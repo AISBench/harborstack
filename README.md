@@ -18,10 +18,31 @@ harborstack 做三件事：
 
 ## 快速开始
 
+### 部署路径
+
+- **傻瓜启动（先看这个）**：[quickstart.md](docs/quickstart.md)
+- **Langfuse 部署方式二选一**：
+  - 共享机器 / 无 root / 宿主机 Docker bridge 转发受限：
+    [dind 路径](docs/runbook-langfuse-dind.md)
+  - 宿主机 Docker 网络正常：[宿主机 Docker 路径](docs/runbook-langfuse-host.md)
+- **评测（独立步骤）**：[runbook-eval.md](docs/runbook-eval.md)
+- **缺少 docker compose / uv / Python ≥3.12**：
+  [无 root 工具链准备](docs/runbook-toolchain.md)
+
+> Langfuse 部署和评测是解耦的：dind 只负责 Langfuse；评测默认使用宿主机
+> Docker。不要把评测的 `DOCKER_HOST` 指向 dind。
+>
+> dind 路径把 Langfuse 跑在隔离的 Docker-in-Docker 里，不依赖宿主机 firewalld
+> 的容器间转发；端口只绑 `127.0.0.1`，不影响其他用户。
+>
+> aarch64 无 RCpc 的 ClickHouse patch 已纳入 dind 路径：仓库目录和 patch cache
+> 以相同绝对路径挂入 dind，`TMPDIR` 指向 cache；x86_64 不会触发。
+
 ### 前置条件
 
-- Linux + Docker（含 `docker compose` 插件）
-- Python 3.10+
+- Linux + Docker（含 `docker compose` v2 ≥ 2.24.4；`!override` 语法要求）
+- git（clone/更新本仓库和 harbor，以及 registry 数据集）
+- Python 3.12+（harbor 要求；harborstack 自身 ≥3.10）
 - 一份可用的 harbor 工作区（`run` 依赖它；只用 `display` 看已有产物时可跳过）
 - `aarch64` 且 CPU 无 RCpc 时会自动对 ClickHouse 二进制做指令穿刺（x86 会跳过）
 
@@ -32,11 +53,15 @@ git clone https://github.com/ivanbao9783/harbor-otel-stack && cd harbor-otel-sta
 uv sync
 ```
 
-如果 PyPI 访问慢，改用镜像：
+如果 PyPI 访问慢，改用你所在环境可达的镜像：
 
 ```bash
-UV_DEFAULT_INDEX=https://repo.huaweicloud.com/repository/pypi/simple uv sync
+UV_DEFAULT_INDEX=https://pypi.example.com/simple uv sync  # 换成你的可达镜像
 ```
+
+如果系统 Python 低于 3.12，用 `--python` 指向 3.13（见
+[dind Langfuse 路径](docs/runbook-langfuse-dind.md) 或
+[工具链准备](docs/runbook-toolchain.md)）。
 
 ### 2. 准备 harbor 工作区
 
@@ -77,7 +102,7 @@ uv run harborstack init
 [ok  ] volumes      无历史数据卷，可安全初始化
 [ok  ] langfuse_web 按 tag 拉取后 digest 校验通过
 [skip] minio        已就绪 sha256:451fe6858cb770cc9…
-[ok  ] clickhouse_patch 本机无需穿刺，跳过
+[ok  ] clickhouse_patch x86_64 无需穿刺，跳过
 [ok  ] ports        web=18930，worker=18900，…
 [ok  ] render       /path/to/var/.env
 [ok  ] compose      config 校验通过
@@ -97,10 +122,15 @@ Langfuse   http://localhost:18930
 
 ### 5. 跑评测
 
+评测与 Langfuse 部署解耦，默认使用**宿主机 Docker**；完整前置检查、运行和
+导入命令见 [评测手册](docs/runbook-eval.md)。
+
 `--` 之后原样传给 harbor：
 
 ```bash
-uv run harborstack run -- -c config.yaml -t ./task
+unset DOCKER_HOST
+uv run harborstack run -- run -p /path/to/tasks -a jiuwenswarm \
+  -m deepseek/deepseek-flash -e docker -n 1 -y
 ```
 
 相对路径按你当前所在目录解析；没有指定 `-o/--out` 时，产物会自动落到 `var/runs/<id>`，不会写进 harbor 仓。只想验证路径与命令、不真正开跑，可加 `--dry-run`。
@@ -162,8 +192,13 @@ HARBORSTACK_PATHS__HARBOR_REPO=~/code/harbor uv run harborstack run ...
 
 ## 文档
 
+- [快速启动](docs/quickstart.md) —— 选 Langfuse 部署方式，跑通第一条链路
+- [dind Langfuse 部署](docs/runbook-langfuse-dind.md) —— dind 的原理、脚本和排错
+- [宿主机 Docker Langfuse 部署](docs/runbook-langfuse-host.md) —— 详细步骤
+- [评测手册](docs/runbook-eval.md) —— 评测前置检查、运行、导入和结果判断
+- [FAQ / 排错](docs/faq.md) —— 常见现象、原因和规避
+- [无 root 工具链](docs/runbook-toolchain.md) —— Docker CLI/Compose、uv、Python 的用户级准备
 - [设计文档](docs/design.md) —— 架构、契约、不变量、决策记录
-- [全新环境复现手册](docs/runbook-fresh-rebuild.md) —— 从零到跑通的逐步操作
 
 ## 开发
 

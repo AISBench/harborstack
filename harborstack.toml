@@ -50,7 +50,7 @@ image = "library/redis:7-alpine"
 
 [image]
 # docker hub 直连不可用时的镜像代理前缀，留空则用原 ref
-mirror = "docker.1ms.run"
+mirror = "docker.m.daocloud.io"
 
 [export]
 mode = "full"
