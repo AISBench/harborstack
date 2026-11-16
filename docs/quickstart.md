@@ -47,6 +47,13 @@ scripts/dind/check-host-network.sh || true
 - 输出 `RESULT: host bridge OK`：方式 B 可用。
 - 输出 `RESULT: host bridge BLOCKED`：用方式 A。
 
+### 已有离线资源包
+
+如果镜像站不可达，或手里已有归档的运行时 bundle，先用
+`.venv/bin/harborstack install --from-bundle <解包目录>` 代替联网的 `install`，
+再按所选方式继续。打包、归档和恢复的完整流程见
+[runbook-bundle.md](runbook-bundle.md)。
+
 ## 2. 方式 A：dind 起 Langfuse
 
 一条命令（会依次准备 venv、启动 dind、导入镜像、起栈、验证）：

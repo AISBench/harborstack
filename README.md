@@ -26,6 +26,7 @@ harborstack 做三件事：
     [dind 路径](docs/runbook-langfuse-dind.md)
   - 宿主机 Docker 网络正常：[宿主机 Docker 路径](docs/runbook-langfuse-host.md)
 - **评测（独立步骤）**：[runbook-eval.md](docs/runbook-eval.md)
+- **离线 / 内网**：[离线 bundle](docs/runbook-bundle.md) —— 打包运行时资源并归档，目标机器不联网
 - **缺少 docker compose / uv / Python ≥3.12**：
   [无 root 工具链准备](docs/runbook-toolchain.md)
 
@@ -143,6 +144,20 @@ uv run harborstack display path/to/run_dir
 
 `run_dir` 可以是整个 run 目录（批量导入所有 case），也可以是单个 trial 目录。导入后打开 Langfuse，在 **Experiments** 页按 run 分组查看。
 
+实验分组由三部分决定：
+
+| Langfuse 字段 | 来源 |
+|---|---|
+| `experiment.id` | trial 的 `run_id`/`job_id`（来自 `result.json`）；当前 harbor 产物没有这两个字段，实际落到 trial 的父目录名，也就是 job 目录名 |
+| `experiment.name` | `run.json` 的 `job_name` → `argv` 里的 `--job-name` → 导入根目录名，依次回退 |
+| `experiment.dataset_id` | `run.json` 的 `argv` 里 `-p`（或 `--path`/`--dataset`）的目录名；都没写时回退到 job 目录名 |
+
+`experiment.id` 同时参与 `trace_id` 的计算，导入后不可再改，否则会产生重复 trace。常规用法（把 job 目录作为 `run_dir`）下它等于 job 目录名；如果希望它可读，请在导入前把 job 目录命名为想要的 ID（例如 `tb21-full-20261113`），不要依赖事后修改。
+
+核对导入量时以 `events_full` 表或 Langfuse API 为准：v4 的 `observations`/`traces` 是派生聚合表，不随写入实时同步，直接查可能为 0，容易误判为导入失败。
+
+`display` 结束前会对最后一条**成功导入**的 trace 做有界等待（默认约 60s，单次查询超时 5s），确认 API 可查后再返回。超时只打印 `[warn] settle ...`，**不改变退出码**，表示数据仍在入库，稍后刷新即可，不要重复执行 `display`。等待时长可用 `--wait N`、`--no-wait` 或配置项 `display.wait_seconds` 调整（`0` 表示不等待）。score 的可见性还会比 observation 再晚几秒，看到分数暂时偏少时先等待再复查。
+
 ## 命令一览
 
 | 命令 | 作用 |
@@ -153,12 +168,14 @@ uv run harborstack display path/to/run_dir
 | `run` | 透传调用 harbor 跑评测 |
 | `display` | 扫描产物 → 转换 → 导入 Langfuse |
 | `down` | 停栈（默认连数据卷一起删） |
-| `bundle create\|verify` | 打包 / 校验离线分发件 |
+| `bundle create\|verify` | 打包 / 校验离线分发件（`create` 只生成目录；手工打 tar 时顶层目录名取自 `--out` 的目录名） |
 | `version` | 版本信息 |
 
 除 `version` 外的每个子命令都接受 `--config`（指定配置）、`--set k=v`（覆盖单项，可重复）、`--json`（机器可读输出）和 `--lock`（指定锁文件）；`run`/`display` 不使用 `lock.json`。`--version` 是根命令参数。
 
 退出码：`0` 成功、`2` 参数或调用错误、`3` 配置或环境不满足（含 `doctor` 的 `fail`、`install` 失败、`init` 的任一失败）、`4` 服务不可用（`display` 健康门禁失败或 `down` 失败）、`5` 数据异常（`bundle verify` 不符，以及 `run` 把 harbor 的非 0/2 退出码统一映射为 5）。
+
+判断成败请以退出码为准：通过管道查看输出（如 `harborstack install 2>&1 | tail -20`）时，shell 的 `$?` 取的是管道最后一个命令的状态，会把失败误判为成功。建议先重定向到日志再检查退出码，或启用 `set -o pipefail`。
 
 ## 配置
 
@@ -196,6 +213,7 @@ HARBORSTACK_PATHS__HARBOR_REPO=~/code/harbor uv run harborstack run ...
 - [dind Langfuse 部署](docs/runbook-langfuse-dind.md) —— dind 的原理、脚本和排错
 - [宿主机 Docker Langfuse 部署](docs/runbook-langfuse-host.md) —— 详细步骤
 - [评测手册](docs/runbook-eval.md) —— 评测前置检查、运行、导入和结果判断
+- [离线 bundle](docs/runbook-bundle.md) —— 打包、归档到对象存储、在干净机器上恢复部署
 - [FAQ / 排错](docs/faq.md) —— 常见现象、原因和规避
 - [无 root 工具链](docs/runbook-toolchain.md) —— Docker CLI/Compose、uv、Python 的用户级准备
 - [设计文档](docs/design.md) —— 架构、契约、不变量、决策记录

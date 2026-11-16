@@ -1,7 +1,8 @@
-"""M5：run 的环境发现与参数拼装、display 的 report 结构与幂等 trace。"""
+"""run 的环境发现与参数拼装、display 的 report 结构、幂等 trace 与 settle 等待。"""
 
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -512,3 +513,61 @@ def test_trace_exists_false_when_empty_or_error(monkeypatch):
 
     monkeypatch.setattr(display_cmd.urllib.request, "urlopen", boom)
     assert display_cmd.trace_exists("http://h", "pk", "sk", "abc") is False
+
+
+def _entry(trace_id: str, status: str = "ok") -> dict:
+    return {"status": status, "trace": {"id": trace_id}}
+
+
+def test_settle_skips_when_disabled_or_nothing_new():
+    assert display_cmd._settle("http://h", "pk", "sk", [_entry("a")], 0) is None
+    assert display_cmd._settle("http://h", "pk", "sk", [], 60) is None
+    assert display_cmd._settle(
+        "http://h", "pk", "sk", [_entry("a", "skipped")], 60) is None
+    assert display_cmd._settle(
+        "http://h", "pk", "sk", [_entry("a", "failed")], 60) is None
+
+
+def test_settle_uses_last_new_trace_and_returns_when_visible(monkeypatch):
+    calls = {"n": 0}
+
+    def fake(host, pk, sk, trace_id, timeout=0):
+        calls["n"] += 1
+        return calls["n"] >= 3
+
+    monkeypatch.setattr(display_cmd, "trace_exists", fake)
+    monkeypatch.setattr(display_cmd.time, "sleep", lambda _: None)
+    out = display_cmd._settle(
+        "http://h", "pk", "sk",
+        [_entry("a"), _entry("b", "skipped"), _entry("c"), _entry("d", "failed")], 5)
+    assert out["visible"] is True
+    assert out["trace_id"] == "c"
+    assert calls["n"] == 3
+
+
+def test_settle_times_out_without_raising(monkeypatch):
+    monkeypatch.setattr(display_cmd, "trace_exists", lambda *a, **k: False)
+    monkeypatch.setattr(display_cmd.time, "sleep", lambda _: None)
+    out = display_cmd._settle("http://h", "pk", "sk", [_entry("a")], 0.01)
+    assert out["visible"] is False
+    assert out["trace_id"] == "a"
+
+
+def test_settle_ignores_non_finite_wait(monkeypatch):
+    monkeypatch.setattr(display_cmd, "trace_exists", lambda *a, **k: False)
+    for bad in (float("nan"), float("inf"), float("-inf")):
+        assert display_cmd._settle(
+            "http://h", "pk", "sk", [_entry("a")], bad) is None
+
+
+def test_wait_seconds_rejects_non_finite():
+    for raw in ("nan", "inf", "-inf"):
+        with pytest.raises(argparse.ArgumentTypeError):
+            cli._wait_seconds(raw)
+
+
+def test_config_rejects_non_finite_wait():
+    cfg = cfgmod.deep_merge(
+        cfgmod.BUILTIN_DEFAULTS, {"display": {"wait_seconds": float("nan")}})
+    with pytest.raises(cfgmod.ConfigError):
+        cfgmod._validate(cfg)

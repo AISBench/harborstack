@@ -1,4 +1,4 @@
-"""M3：端口分配器、渲染、资产指纹、manifest、bundle 校验。"""
+"""端口分配、渲染与密钥、资产指纹、manifest、bundle 校验、镜像拉取。"""
 
 from __future__ import annotations
 
@@ -258,6 +258,31 @@ def test_bundle_verify_detects_missing(tmp_path: Path):
     assert verdict["missing"] == ["compose/a.yml"]
 
 
+def test_ensure_pip_bootstraps_and_logs(monkeypatch):
+    """pip 缺失时走 ensurepip，并通过传入的 log 输出（曾因模块级 log 未定义崩）。"""
+    class _Proc:
+        def __init__(self, code):
+            self.returncode = code
+            self.stderr = ""
+
+    codes = iter([1, 0])
+    monkeypatch.setattr(bundle_cmd.subprocess, "run",
+                        lambda *a, **k: _Proc(next(codes)))
+    messages: list[str] = []
+    bundle_cmd._ensure_pip(messages.append)
+    assert any("ensurepip" in m for m in messages)
+
+
+def test_ensure_pip_raises_bundle_error_when_unavailable(monkeypatch):
+    class _Proc:
+        returncode = 1
+        stderr = ""
+
+    monkeypatch.setattr(bundle_cmd.subprocess, "run", lambda *a, **k: _Proc())
+    with pytest.raises(bundle_cmd.BundleError):
+        bundle_cmd._ensure_pip(lambda *_: None)
+
+
 def test_pull_by_digest_pins_local_tag(monkeypatch):
     from harborstack.commands import install
 
@@ -316,7 +341,7 @@ def test_pull_timeout_falls_back_to_tag(monkeypatch):
     def fake_run(cmd, **kwargs):
         calls.append(cmd)
         if cmd[2].endswith("@sha256:abc"):
-            raise install.subprocess.TimeoutExpired(cmd, install.PULL_TIMEOUT)
+            raise install.subprocess.TimeoutExpired(cmd, install.DEFAULT_PULL_TIMEOUT)
         return _Proc()
 
     monkeypatch.setattr(install.subprocess, "run", fake_run)
@@ -333,7 +358,7 @@ def test_pull_timeout_on_both_paths_mentions_mirror(monkeypatch):
     from harborstack.commands import install
 
     def fake_run(cmd, **kwargs):
-        raise install.subprocess.TimeoutExpired(cmd, install.PULL_TIMEOUT)
+        raise install.subprocess.TimeoutExpired(cmd, install.DEFAULT_PULL_TIMEOUT)
 
     monkeypatch.setattr(install.subprocess, "run", fake_run)
     with pytest.raises(install.InstallError, match="换源"):

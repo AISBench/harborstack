@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -33,15 +35,27 @@ def _tag(source: str, target: str) -> None:
             f"标记镜像失败：{source} -> {target}\n{p.stderr.strip()[:300]}")
 
 
-PULL_TIMEOUT = 1800
+DEFAULT_PULL_TIMEOUT = 1800
 MIRROR_HINT = ("代理可能未缓存该 digest 或链路卡住；可换源重试："
                "HARBORSTACK_IMAGE__MIRROR=docker.m.daocloud.io harborstack install")
+
+
+def _pull_timeout() -> int:
+    """拉取超时秒数，可用 HARBORSTACK_PULL_TIMEOUT 覆盖（最小 60s）。"""
+    raw = os.environ.get("HARBORSTACK_PULL_TIMEOUT", "").strip()
+    if not raw:
+        return DEFAULT_PULL_TIMEOUT
+    try:
+        return max(60, int(raw))
+    except ValueError:
+        return DEFAULT_PULL_TIMEOUT
 
 
 def _run_pull(cmd: list[str]) -> subprocess.CompletedProcess | None:
     """执行一次 pull；超时返回 None，交给调用方决定是否换路径重试。"""
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=PULL_TIMEOUT)
+        return subprocess.run(cmd, capture_output=True, text=True,
+                              timeout=_pull_timeout())
     except subprocess.TimeoutExpired:
         return None
 
@@ -59,7 +73,9 @@ def _pull(ref: str, digest: str) -> Action:
     p2 = _run_pull(["docker", "pull", ref])
     if p2 is None:
         raise InstallError(
-            f"{ref} 拉取超时（各 {PULL_TIMEOUT}s）：digest 与 tag 两条路径均未完成\n"
+            f"{ref} 拉取超时（digest 与 tag 各 {_pull_timeout()}s 均未完成）\n"
+            "可提高超时后重试：HARBORSTACK_PULL_TIMEOUT=7200 harborstack install\n"
+            f"或手工拉取：docker pull {target} && docker tag {target} {ref}\n"
             f"{MIRROR_HINT}")
     if p2.returncode != 0:
         raise InstallError(
@@ -69,7 +85,11 @@ def _pull(ref: str, digest: str) -> Action:
     if actual != digest:
         raise InstallError(
             f"{ref} 拉到的 digest 与 lock 不符：{actual} != {digest}\n"
-            "tag 已漂移；请运行 harborstack upgrade 重新冻结，不要继续使用旧 lock")
+            "通常是 digest 路径超时后回退 tag，而 tag 已漂移。处置（按顺序）：\n"
+            "  1) 提高超时后重试安装：HARBORSTACK_PULL_TIMEOUT=7200 harborstack install\n"
+            f"  2) 或按 digest 手工拉取并回标 tag：docker pull {target} && docker tag {target} {ref}\n"
+            "  3) 只有确认要升级版本时才更新 lock.json，并重新生成 ClickHouse 补丁\n"
+            "未确认前不要混用新旧 langfuse 组件（web/worker 必须同版本）")
     return Action(ref, "ok", "按 tag 拉取后 digest 校验通过")
 
 
@@ -124,6 +144,11 @@ def import_bundle(cfg: dict, lock: lockfile.Lock, bundle_dir: Path,
         actual = fsutil.sha256_file(dest)
         if actual != expected:
             raise InstallError(f"bundle 里的补丁产物 sha256 不符：{actual} != {expected}")
+        # 补丁元数据随二进制一起落到缓存，供 init/doctor 读取站点统计
+        # sites 不在 lockfile 的必填项里，旧 lock / 手写 lock 可能没有
+        dest.with_suffix(".json").write_text(
+            json.dumps({"sites": lock.artifacts["clickhouse_patch"].get("sites") or {}}),
+            encoding="utf-8")
         actions.append(Action("clickhouse_patch", "ok", f"已导入 {dest.name}"))
 
     return actions

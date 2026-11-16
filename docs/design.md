@@ -293,6 +293,9 @@ include_patched_bin = true
 
 [report]
 path = "./var/report.json"
+
+[display]
+wait_seconds = 60           # 导入后等待 trace 可查的上限（秒）；0 = 不等，dry-run 不等待
 ```
 
 注意 `[bundle]` 段只描述默认输出位置与是否带入补丁产物，**打包档位由 CLI 的 `--mode` 决定**
@@ -497,6 +500,7 @@ digest → 提取二进制 → 纯 Python 解析 ELF program header，取全部�
     "status": "ok",
     "error": null
   }],
+  "settle": { "trace_id": "aee8c80ab0c6d45d0f9b7270b7954cc4", "visible": true, "waited_s": 3.2 },
   "skipped": [{ "trial": "task__agent__model__1", "path": "/abs/path",
                 "kind": "parse_error", "reason": "trajectory.json 解析失败：..." }],
   "missing": [{ "trial": "task__agent__model__2", "path": "/abs/path",
@@ -515,7 +519,8 @@ digest → 提取二进制 → 纯 Python 解析 ELF program header，取全部�
 - `exception` 取自 Trial `result.json` 的 `exception_info`，无异常为 `null`
 - `skipped` 明细只记「有 `agent/trajectory.json` 但读不出来」的目录；`skipped > 0` 计入失败
 - `missing` 明细记「case 目录在、却没有 `agent/trajectory.json`」的目录（容器没起来、超时被杀、agent 未落盘）；只留 `trial` / `path` / `kind` / `reason` 四个定位字段，详细原因回原始目录查；**不重建 trace、不中断流程、不参与失败判定**，只进报告，避免静默消失
-- 发现口径：目录名含 `__` 且至少有 `agent/trajectory.json` 或 `result.json`；job 根目录名字不含 `__`，不会被误判成 case
+- 发现口径：不看目录名，只看产物文件（`agent/trajectory.json`、`agent/events.jsonl.gz`、`verifier/reward.txt|json`）与 `result.json` 的 schema。`result.json` 含 `n_total_trials`/`stats` 视为 job 级并排除；含 `trial_name`/`task_id`/`exception_info`/`verifier` 视为 trial 级。根目录若仅凭 `result.json` 命中且其下还有 case，按容器目录处理，避免吞掉子 trial
+- `settle`：真实导入且存在成功导入的 trace 时才有值（`dry_run` 或无需等待为 `null`）；`visible=false` 表示超时，仅提示、不参与 `status` 与退出码
 - `status`：任一 Trial 上报失败、`skipped > 0`、`negative > 0`、`outside_root > 0`、或没有任何 Trial，整体为 `failed`（退出码 5）
 - Trial 级 `status` 为 `agent_error` 表示 agent 异常（如模型 402 余额不足）但已有轨迹仍完成导入；此时 `error` 记录异常类型与消息，整体 `status` 仍为 `failed`，避免把异常 run 当成干净评测
 - `dry_run = true` 时不发网络请求、不写 report.json，但 trace_id 与真实导入一致，可用于预检

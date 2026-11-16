@@ -1,4 +1,4 @@
-"""M1 骨架的单元测试：配置优先级、lock 校验、doctor 在缺镜像时的行为。"""
+"""配置优先级、lock 校验、doctor 在缺镜像时的行为。"""
 
 import json
 from pathlib import Path

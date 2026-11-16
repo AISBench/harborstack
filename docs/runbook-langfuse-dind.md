@@ -212,6 +212,10 @@ export HARBORSTACK_IMAGE__MIRROR=docker.m.daocloud.io
 
 预期 6 个镜像 `[ok]`，`clickhouse_patch` 显示 `[skip]`（x86_64 无需穿刺）。
 
+> 镜像来自离线 bundle 时，把上面的 `install` 换成
+> `.venv/bin/harborstack install --from-bundle /path/to/harborstack-<arch>-runtime`；
+> 后面的 `load-images.sh` 不变。打包与恢复流程见 [runbook-bundle.md](runbook-bundle.md)。
+
 然后把宿主机镜像流式导入 dind：
 
 ```bash

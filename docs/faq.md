@@ -84,6 +84,18 @@ observations 立即可查。
 
 如果长时间仍为 0，再检查 Langfuse worker/ClickHouse 日志。
 
+### 导入刚结束，score 数量比预期少
+
+**现象**：`display` 返回后立刻查 ClickHouse `scores` 表或页面，分数条数偏少（例如
+预期 84 条，首次只看到 72 条），过十几秒再查才补齐。
+
+**原因**：score 走 Langfuse 的异步写入链路，HTTP 2xx 只代表已接收；写入
+`events_full`/`scores` 与可查询之间存在最终一致性延迟。
+
+**处理**：等待 10–30 秒后重查，不要据此判定导入失败或重复执行 `display`。
+`display` 默认会在结束前对最后一条成功导入的 trace 做有界等待（约 60s），可用
+`--wait N` / `--no-wait` 调整；超时只给 `[warn]`，不影响退出码。
+
 ### `dind_ip not found`
 
 **原因**：watcher 继承了 `DOCKER_HOST`，跑去 dind 内部找 dind 容器。
@@ -184,6 +196,30 @@ scripts/dind/run-init.sh
 
 这是宿主机 forwarder，正常；`init` 只有在重跑且未停旧转发时才可能改选端口，
 `run-init.sh` 会先停旧转发。
+
+### `display` 之后出现两份 `report.json`
+
+**现象**：run 目录下和 `var/report.json` 各有一份，内容相同。
+
+**原因**：`display` 同时写「随产物归档的那份」和配置项 `report.path`（默认 `./var/report.json`）指向的「最新一份」。
+
+**处理**：两份都是预期产物。判断某次导入请以 run 目录下的那份为准；`var/report.json` 只表示最近一次导入。
+
+### 完全重置 Langfuse 时的顺序
+
+**现象**：只删镜像不删卷，`init` 报 secrets 与卷内凭证不匹配而拒绝启动。
+
+**原因**：`init` 的一致性门禁按设计生效，卷里保留着旧环境的密钥。
+
+**处理**：按顺序执行，缺一不可：
+
+```bash
+harborstack down            # 停栈并删本项目的容器与卷
+docker rmi <六个镜像>        # 镜像按 lock 里的 ref 删除
+rm -rf ~/.cache/harborstack/bins/* var/*
+```
+
+不要使用 `docker system prune` 或批量删除，共享机器上会误伤他人容器。
 
 ## 评测
 
@@ -290,6 +326,33 @@ verifier/ctrf.json
 
 - 用包装器：默认从 `var/runs` 取最新；也可以显式传 `var/runs/<id>`。
 - 直接 `harbor run`：把 `-o` 指定的 job 目录传给 `display`。
+
+## 离线 bundle
+
+### 解包后目录名和文档里的不一致
+
+**原因**：tar 记录的是打包时的顶层目录名；如果压缩包名改过而目录没改，解包仍用旧名。
+
+**处理**：`mv` 成期望的名字即可；或按
+[runbook-bundle.md](runbook-bundle.md) 重打，让包名、目录名一致。
+
+### `bundle verify` 报 `missing` / `mismatch`
+
+**原因**：下载不完整、归档时漏文件，或包内文件被改动。
+
+**处理**：重新下载并核对 `SHA256SUMS`；仍不一致就重新打包，不要带着损坏的包部署。
+
+### `install --from-bundle` 后 `init` 报补丁字段 KeyError
+
+**原因**：缓存里只有 `patch/*.bin`，缺少同名 `.json` sidecar，`init` 读不到站点统计。
+
+**处理**：用当前版本重新 `install --from-bundle`（会自动补写 sidecar），或重新生成 bundle。
+旧包不要手工拼 sidecar，直接重打更可靠。
+
+### 换架构或换 Langfuse 版本后还能用旧包吗
+
+不能。`images.tar` 与架构、版本绑定；按
+[runbook-bundle.md](runbook-bundle.md) 的目录规范分别归档，不要混放。
 
 ## 范围和限制
 

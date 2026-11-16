@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import base64
 import json
+import math
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -87,6 +89,33 @@ def trace_exists(host: str, public_key: str, secret_key: str,
     except (urllib.error.HTTPError, urllib.error.URLError, json.JSONDecodeError):
         return False
     return bool(payload.get("data"))
+
+
+def _settle(host: str, public_key: str, secret_key: str, entries: list[dict],
+            seconds: float, interval: float = 1.0) -> dict | None:
+    """等最后一个**成功导入**的 trace 在 API 里可查。
+
+    Langfuse 的写入是最终一致的：OTLP/score 请求返回 2xx 只代表已接收。
+    这里只做有界等待，超时不改变退出码，只提示用户稍后刷新。
+    """
+    if not math.isfinite(seconds) or seconds <= 0:
+        return None
+    anchor = next((e for e in reversed(entries)
+                   if (e.get("trace") or {}).get("id")
+                   and e.get("status") in ("ok", "agent_error")), None)
+    if anchor is None:
+        return None
+    trace_id = anchor["trace"]["id"]
+    start = time.monotonic()
+    deadline = start + seconds
+    while True:
+        if trace_exists(host, public_key, secret_key, trace_id, timeout=5.0):
+            return {"trace_id": trace_id, "visible": True,
+                    "waited_s": round(time.monotonic() - start, 1)}
+        if time.monotonic() >= deadline:
+            return {"trace_id": trace_id, "visible": False,
+                    "waited_s": round(time.monotonic() - start, 1)}
+        time.sleep(interval)
 
 
 def _stack(cfg: dict) -> tuple[dict, dict[str, int]]:
@@ -245,7 +274,7 @@ def _argv_value(argv: list[str], *names: str) -> str:
 
 
 def run_name_of(meta: dict, root: Path) -> str:
-    """Langfuse 里一次评测的显示名：优先 --job-name，其次 run 目录名。"""
+    """Langfuse 里一次评测的显示名：优先 run.json 的 job_name，其次 argv 里的 --job-name，最后 run 目录名。"""
     argv = [str(a) for a in (meta.get("argv") or [])]
     return meta.get("job_name") or _argv_value(argv, "--job-name") or root.name
 
@@ -260,7 +289,8 @@ def dataset_id_of(meta: dict, root: Path) -> str:
 
 
 def run_display(cfg: dict, run_dir: str | None = None, dry_run: bool = False,
-                trial_filter: str = "all", log=print) -> dict:
+                trial_filter: str = "all", wait_seconds: float | None = None,
+                log=print) -> dict:
     path = resolve_run_dir(cfg, run_dir)
     meta = load_run_meta(path)
     root = Path(meta["jobs_dir"]) if meta.get("jobs_dir") else path
@@ -344,6 +374,11 @@ def run_display(cfg: dict, run_dir: str | None = None, dry_run: bool = False,
     if exporter is not None:
         exporter.shutdown()
 
+    settle = None
+    if exporter is not None:
+        wait = cfg["display"]["wait_seconds"] if wait_seconds is None else wait_seconds
+        settle = _settle(host, public_key, secret_key, entries, wait)
+
     man, _ = _stack(cfg)
     report = {
         "schema": SCHEMA,
@@ -359,6 +394,7 @@ def run_display(cfg: dict, run_dir: str | None = None, dry_run: bool = False,
             "clickhouse_bin_sha256": ((man.get("binaries") or {}).get("clickhouse") or {}).get("sha256"),
         },
         "trials": entries,
+        "settle": settle,
         "skipped": skipped_entries,
         "missing": missing,
         "status": "ok",
@@ -432,3 +468,10 @@ def print_human(result: dict) -> None:
     else:
         print(f"report     {Path(report['run']['dir']) / REPORT_NAME}")
         print(f"状态       {report['status']}")
+    settle = report.get("settle")
+    if settle:
+        if settle["visible"]:
+            print(f"[ok  ] settle     等待 {settle['waited_s']}s 后 trace 已可查询")
+        else:
+            print(f"[warn] settle     等待 {settle['waited_s']}s 后仍不可查；"
+                  "数据仍在入库，请稍后刷新页面，不要重复执行 display")

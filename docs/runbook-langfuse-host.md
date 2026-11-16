@@ -120,6 +120,15 @@ UV_DEFAULT_INDEX=https://pypi.example.com/simple \
 
 预期：`fail` 必须为 0。全新环境出现 `warn`（镜像未拉取、补丁未缓存、尚未 init）属正常。
 
+> 如果镜像来自离线 bundle，跳过联网拉取，先执行：
+>
+> ```bash
+> unset DOCKER_HOST
+> .venv/bin/harborstack install --from-bundle /path/to/harborstack-<arch>-runtime
+> ```
+>
+> 再继续下一节。打包与恢复流程见 [runbook-bundle.md](runbook-bundle.md)。
+
 ---
 
 ## 6. 起栈

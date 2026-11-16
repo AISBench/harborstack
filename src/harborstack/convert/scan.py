@@ -1,7 +1,7 @@
 """读取层：发现 Trial 目录，解析 ATIF 轨迹与 verifier 判分。
 
-只依赖标准库。目录名按 Harbor 约定 ``task__agent__model__attempt`` 回退解析，
-``result.json`` 存在时以其中的元数据为准。
+只依赖标准库。case 发现不看目录名，只看产物文件与 ``result.json`` 的 schema；
+目录名只在元数据缺失时作为回退来源。
 
 发现阶段区分两种情况，避免 case 静默消失：
 
@@ -65,37 +65,67 @@ def looks_like_trial(path: Path) -> bool:
     return (path / TRAJECTORY_REL).is_file()
 
 
-def looks_like_case_dir(path: Path) -> bool:
-    """Harbor 的 case 目录名为 ``task__agent__model__attempt``。
+JOB_RESULT_KEYS = ("n_total_trials", "stats")
+TRIAL_RESULT_KEYS = ("trial_name", "task_id", "exception_info", "verifier")
 
-    只认带 ``__`` 且至少落了一个产物文件的目录；job 根目录（如
-    ``hs-path-trace-llm2``）虽然也有 result.json，但名字不含 ``__``，不会被误判。
-    """
-    return "__" in path.name and (
-        (path / TRAJECTORY_REL).is_file() or (path / "result.json").is_file()
+
+def _read_json_dict(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _read_result(trial_dir: Path) -> dict[str, Any]:
+    return _read_json_dict(trial_dir / "result.json")
+
+
+def _is_trial_result(path: Path) -> bool:
+    data = _read_json_dict(path)
+    if any(key in data for key in JOB_RESULT_KEYS):
+        return False
+    return any(key in data for key in TRIAL_RESULT_KEYS)
+
+
+def _has_case_artifacts(path: Path) -> bool:
+    return (
+        (path / TRAJECTORY_REL).is_file()
+        or (path / "agent" / "events.jsonl.gz").is_file()
+        or (path / "verifier" / "reward.txt").is_file()
+        or (path / "verifier" / "reward.json").is_file()
     )
+
+
+def looks_like_case_dir(path: Path) -> bool:
+    """只看产物结构与 result.json schema，不依赖目录名。
+
+    job 根目录（``<date>__<time>`` 或任意 ``-o`` 名字）也带 result.json，
+    用 ``n_total_trials``/``stats`` 这类 job 级字段排除；只有 trial 级字段
+    （``trial_name``/``task_id``/``exception_info``/``verifier``）才认。
+    """
+    return _has_case_artifacts(path) or _is_trial_result(path / "result.json")
 
 
 def iter_case_dirs(root: str | Path) -> Iterator[Path]:
     """发现全部 case 目录：既有正常 Trial，也有只剩 result.json 的残缺目录。"""
     root = Path(root)
-    for path in (root, *sorted(root.rglob("*"))):
-        if not path.is_dir() or not looks_like_case_dir(path):
+    candidates = [path for path in (root, *sorted(root.rglob("*")))
+                  if path.is_dir() and looks_like_case_dir(path)]
+    found = set(candidates)
+    # 根目录若仅凭 result.json 命中、且其下还有 case，则它是容器目录而不是
+    # trial：避免某天 job 级 result.json 变成 trial schema 时把全部子 trial 吞掉。
+    if (root in found and not _has_case_artifacts(root)
+            and any(path != root for path in candidates)):
+        found.discard(root)
+    for path in candidates:
+        if path not in found:
             continue
-        if path != root and looks_like_trial(path.parent):
-            continue  # Trial 内部嵌套的同名目录不算独立 case
+        if any(parent in found for parent in path.parents):
+            continue  # 祖先已是 case，内部嵌套目录不重复计入
         yield path
-
-
-def _read_result(trial_dir: Path) -> dict[str, Any]:
-    path = trial_dir / "result.json"
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    return data if isinstance(data, dict) else {}
 
 
 def missing_entry(trial_dir: Path) -> dict[str, Any]:

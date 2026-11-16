@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,7 @@ BUILTIN_DEFAULTS: dict[str, Any] = {
     "export": {"mode": "full", "idempotent": True},
     "bundle": {"dir": "", "mode": "docker-save", "include_patched_bin": True},
     "report": {"path": "./var/report.json"},
+    "display": {"wait_seconds": 60},
 }
 
 
@@ -155,6 +157,11 @@ def _validate(cfg: dict) -> None:
 
     if cfg["bundle"].get("mode") not in ("docker-save", "oci"):
         raise ConfigError("bundle.mode 只能是 docker-save 或 oci")
+
+    wait = cfg["display"].get("wait_seconds")
+    if (not isinstance(wait, (int, float)) or isinstance(wait, bool)
+            or not math.isfinite(wait) or wait < 0):
+        raise ConfigError("display.wait_seconds 必须是非负的有限数值（秒）")
 
 
 def expand_path(value: str) -> Path:

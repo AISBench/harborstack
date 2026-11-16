@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -22,6 +23,18 @@ EXIT_OK, EXIT_USAGE, EXIT_ENV, EXIT_HEALTH, EXIT_DATA = 0, 2, 3, 4, 5
 
 # 这两个命令只读配置，不需要 lock.json
 _NO_LOCK = {"run", "display"}
+
+
+def _wait_seconds(raw: str) -> float:
+    try:
+        value = float(raw)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"不是合法的秒数：{raw!r}") from None
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("等待秒数必须是有限数值")
+    if value < 0:
+        raise argparse.ArgumentTypeError("等待秒数不能为负数；不等待请用 --no-wait")
+    return value
 
 
 def _add_common(p: argparse.ArgumentParser) -> None:
@@ -61,6 +74,11 @@ def _build_parser() -> argparse.ArgumentParser:
     s.add_argument("--dry-run", action="store_true", help="只做体检与计划，不上报")
     s.add_argument("--filter", dest="trial_filter", default="all",
                    choices=("all", "success", "failure"), help="按 reward 过滤 Trial")
+    g = s.add_mutually_exclusive_group()
+    g.add_argument("--wait", dest="wait_seconds", type=_wait_seconds, metavar="SECONDS",
+                   help="导入后等待 trace 可查的最长秒数（默认取配置；0 表示不等）")
+    g.add_argument("--no-wait", dest="wait_seconds", action="store_const", const=0,
+                   help="不等待，导入完成立即返回")
 
     o = sub.add_parser("down", help="只清理本项目的容器与卷")
     _add_common(o)
@@ -134,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = display_cmd.run_display(
                 cfg, run_dir=args.run_dir, dry_run=args.dry_run,
-                trial_filter=args.trial_filter)
+                trial_filter=args.trial_filter, wait_seconds=args.wait_seconds)
         except display_cmd.DisplayError as e:
             print(f"display 拒绝执行：{e}", file=sys.stderr)
             return EXIT_ENV

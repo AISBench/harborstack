@@ -80,7 +80,7 @@ def run_init(cfg: dict, lock: lockfile.Lock, dry_run: bool = False,
         raise InitError("本机需要穿刺，但补丁流水线没有返回产物")
     binary = None
     if patch:
-        binary = {"sha256": patch["sha256"], "patched_sites": patch["sites"]["total"],
+        binary = {"sha256": patch["sha256"], "patched_sites": patch["sites"].get("total"),
                   "patcher": lock.artifacts["clickhouse_patch"]["patcher"]}
 
     # 3. 端口分配：优先复用本项目正在占用的端口

@@ -124,7 +124,8 @@ def build(cfg: dict, lock: lockfile.Lock, log=print) -> PatchResult:
             raise PipelineError(
                 "原始二进制与 lock 记录不符："
                 f"{actual_source[:16]}… != {expected_source[:16]}…\n"
-                "镜像内容已变化，先运行 harborstack upgrade 重新冻结，不要就地覆盖")
+                "镜像内容已变化；确认要升级时需更新 lock.json 并重新生成补丁，"
+                "不要就地覆盖")
 
         log("[3/5] 扫描并替换 LDAPR* -> LDAR*")
         blob = bytearray(raw_path.read_bytes())

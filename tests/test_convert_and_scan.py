@@ -1,4 +1,4 @@
-"""M4：内嵌转换器的幂等 id、时间不变量与读取容错。"""
+"""转换器的幂等 id、时间不变量、读取容错，以及 case 目录发现。"""
 
 from __future__ import annotations
 
@@ -293,6 +293,86 @@ def test_load_trials_reports_case_without_atif(tmp_path: Path):
     assert "缺少" in missing[0]["reason"]
     assert "NonZeroAgentExitCodeError" in missing[0]["reason"]
     assert "exception" not in missing[0], "报告只留定位信息，细节回原始目录查"
+
+
+def test_case_discovery_ignores_directory_names(tmp_path: Path):
+    """job 根与 trial 都用自定义名字（无 __），仍能正确发现。"""
+    job = tmp_path / "my-run"
+    _make_trial(job, name="trial-no-separator", reward="1.0")
+    (job / "result.json").write_text(json.dumps({
+        "id": "job-1", "n_total_trials": 1, "stats": {},
+    }), encoding="utf-8")
+
+    records, skipped, missing = scan.load_trials(job)
+
+    assert [r.trial_dir.name for r in records] == ["trial-no-separator"]
+    assert skipped == 0 and missing == []
+
+
+def test_job_root_with_timestamp_name_is_not_case(tmp_path: Path):
+    """harbor 默认 job 目录名含 __，但 job 级 result.json 不应被当成 trial。"""
+    job = tmp_path / "2026-11-13__07-01-21"
+    _make_trial(job, name="db-wal-recovery__ci3cG8H", reward="1.0")
+    (job / "result.json").write_text(json.dumps({
+        "id": "job-2", "n_total_trials": 1, "stats": {"n_completed_trials": 1},
+    }), encoding="utf-8")
+
+    records, skipped, missing = scan.load_trials(job)
+
+    assert [r.trial_dir.name for r in records] == ["db-wal-recovery__ci3cG8H"]
+    assert skipped == 0 and missing == []
+
+
+def test_case_with_only_verifier_output_is_missing(tmp_path: Path):
+    """只剩 verifier 产物的 trial 也要报 missing，不能静默消失。"""
+    trial = tmp_path / "t-rewardonly"
+    (trial / "verifier").mkdir(parents=True)
+    (trial / "verifier" / "reward.txt").write_text("0.0", encoding="utf-8")
+
+    records, skipped, missing = scan.load_trials(tmp_path)
+
+    assert records == [] and skipped == 0
+    assert len(missing) == 1 and missing[0]["kind"] == "missing_atif"
+
+
+def test_nested_duplicate_case_counted_once(tmp_path: Path):
+    """外层已是 case 时，内部嵌套的 case 目录不重复计入。"""
+    _make_trial(tmp_path, name="outer", reward="1.0")
+    _make_trial(tmp_path / "outer", name="inner", reward="1.0")
+
+    records, _, missing = scan.load_trials(tmp_path)
+
+    assert [r.trial_dir.name for r in records] == ["outer"]
+    assert missing == []
+
+
+def test_container_root_with_trial_schema_result_not_a_case(tmp_path: Path):
+    """根目录 result.json 若变成 trial schema，不能把子 trial 整体吞掉。"""
+    _make_trial(tmp_path, name="child-a", reward="1.0")
+    _make_trial(tmp_path, name="child-b", reward="0.0")
+    (tmp_path / "result.json").write_text(
+        json.dumps({"trial_name": "child-a", "task_id": "child-a"}),
+        encoding="utf-8")
+
+    assert [p.name for p in scan.iter_case_dirs(tmp_path)] == ["child-a", "child-b"]
+
+
+def test_trial_root_with_artifacts_is_still_a_case(tmp_path: Path):
+    """单独导入一个 trial 目录时，根目录仍要被识别为 case。"""
+    trial = _make_trial(tmp_path, name="only", reward="1.0")
+    (trial / "result.json").write_text(
+        json.dumps({"trial_name": "only", "task_id": "only"}), encoding="utf-8")
+
+    assert list(scan.iter_case_dirs(trial)) == [trial]
+
+
+def test_unreadable_result_without_artifacts_is_ignored(tmp_path: Path):
+    """坏 result.json 且没有任何产物，无数据可导，不算 case。"""
+    junk = tmp_path / "junk"
+    junk.mkdir()
+    (junk / "result.json").write_text("{not json", encoding="utf-8")
+
+    assert list(scan.iter_case_dirs(tmp_path)) == []
 
 
 def test_trial_filter_by_reward(tmp_path: Path):

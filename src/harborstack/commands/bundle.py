@@ -37,6 +37,21 @@ class BundleError(Exception):
     pass
 
 
+def _ensure_pip(log=print) -> None:
+    """offline 档需要 pip；uv 创建的 venv 默认没有，先用 ensurepip 补齐。"""
+    probe = subprocess.run([sys.executable, "-m", "pip", "--version"],
+                           capture_output=True, text=True)
+    if probe.returncode == 0:
+        return
+    fix = subprocess.run([sys.executable, "-m", "ensurepip", "--upgrade"],
+                         capture_output=True, text=True)
+    if fix.returncode != 0:
+        raise BundleError(
+            "当前 Python 没有 pip，且 ensurepip 不可用；"
+            "请先安装 pip（uv 环境可运行 `uv pip install pip`）")
+    log("[info] 已通过 ensurepip 补齐 pip")
+
+
 def _files_manifest(root: Path) -> list[dict]:
     rows = []
     for path in sorted(root.rglob("*")):
@@ -99,6 +114,7 @@ def create(cfg: dict, lock: lockfile.Lock, out: Path, mode: str = "full",
         repo = Path.cwd()
         if not (repo / "pyproject.toml").exists():
             raise BundleError("offline 模式需要在仓库根执行（找不到 pyproject.toml）")
+        _ensure_pip(log)
         for cmd in (
             [sys.executable, "-m", "pip", "wheel", "--no-deps", "-w", str(wheels_dir), str(repo)],
             [sys.executable, "-m", "pip", "download", "tomli", "-d", str(wheels_dir)],
