@@ -14,7 +14,7 @@ Evaluation is a separate step and defaults to the host Docker daemon; see
 最短路径：
 
 ```bash
-cd ~/code/harbor-otel-stack
+cd ~/code/harborstack
 scripts/dind/up.sh
 ```
 

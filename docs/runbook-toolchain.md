@@ -107,7 +107,7 @@ python3.13 --version
 
 ## 5. git（必需）
 
-git 是环境准备的一部分：clone/更新 `harbor-otel-stack`、`harbor`，以及使用
+git 是环境准备的一部分：clone/更新 `harborstack`、`harbor`，以及使用
 registry 数据集（`-d`）都需要它。
 
 RPM 系发行版上可以做用户级安装，不需要 sudo：

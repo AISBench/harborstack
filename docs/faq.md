@@ -20,7 +20,7 @@ chmod +x scripts/show-trace.py
 ### `git: command not found`
 
 **原因**：机器没有安装 git。git 是环境准备的一部分：clone/更新
-`harbor-otel-stack`、`harbor`，以及使用 registry 数据集都需要它。
+`harborstack`、`harbor`，以及使用 registry 数据集都需要它。
 
 **处理**：按 [runbook-toolchain.md](runbook-toolchain.md) §5 做用户级安装，
 或让管理员安装 git。

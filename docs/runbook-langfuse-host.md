@@ -15,7 +15,7 @@
 所有命令都在 harborstack 仓库根目录执行：
 
 ```bash
-cd /path/to/harbor-otel-stack                 # 换成你的实际路径
+cd /path/to/harborstack                 # 换成你的实际路径
 export HARBORSTACK_PATHS__HARBOR_REPO=~/code/harbor   # run 使用的 harbor 仓
 ```
 
@@ -97,7 +97,7 @@ UV_DEFAULT_INDEX=https://pypi.example.com/simple \
 ## 4. 装 harborstack 环境
 
 ```bash
-cd /path/to/harbor-otel-stack
+cd /path/to/harborstack
 uv sync --python python3.13
 ```
 

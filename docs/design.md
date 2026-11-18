@@ -1,6 +1,6 @@
-# harbor-otel-stack 设计方案
+# harborstack 设计方案
 
-> 仓库名：`harbor-otel-stack`　包名 / CLI：`harborstack`
+> 仓库名：`harborstack`　包名 / CLI：`harborstack`
 > 本文描述当前实现的设计与契约。与代码冲突时以代码为准，并同步修订本文。
 
 ---
