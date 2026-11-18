@@ -50,7 +50,7 @@ harborstack 做三件事：
 ### 1. 安装 harborstack
 
 ```bash
-git clone https://github.com/ivanbao9783/harbor-otel-stack && cd harbor-otel-stack
+git clone https://github.com/AISBench/harborstack && cd harborstack
 uv sync
 ```
 

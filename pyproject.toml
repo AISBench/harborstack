@@ -34,9 +34,9 @@ dev = ["pytest>=8.0"]
 harborstack = "harborstack.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/ivanbao9783/harbor-otel-stack"
-Repository = "https://github.com/ivanbao9783/harbor-otel-stack"
-Issues = "https://github.com/ivanbao9783/harbor-otel-stack/issues"
+Homepage = "https://github.com/AISBench/harborstack"
+Repository = "https://github.com/AISBench/harborstack"
+Issues = "https://github.com/AISBench/harborstack/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/harborstack"]
