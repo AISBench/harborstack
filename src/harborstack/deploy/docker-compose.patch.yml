@@ -1,0 +1,21 @@
+# ============================================================
+# 仅在「本机 CPU 无 RCpc，必须穿刺 ClickHouse」时叠加的这一层
+#
+# Kunpeng 920 是 ARMv8.2-A，没有 ARMv8.3 引入的 Load-Acquire RCpc。
+# 官方 aarch64 构建在 jemalloc 第一次分配内存时执行 ldapr 直接 SIGILL，
+# 因此用同架构、LDAPR* -> LDAR* 穿刺后的二进制覆盖 /usr/bin/clickhouse。
+# LDAR 是 RCsc 语义，强于 LDAPR，正确性安全，只损失极小的性能。
+#
+# 第二个挂载关闭 ClickHouse 对可执行文件的自校验：穿刺改变了字节，
+# 内嵌的参考校验和必然不匹配，否则容器会以 CORRUPTED_DATA 拒绝启动。
+#
+# 注意：镜像里 clickhouse-client / clickhouse-keeper 等都是 /usr/bin/clickhouse
+# 的软链，所以覆盖这一个文件即可，客户端工具也一并变成穿刺版。
+# ============================================================
+services:
+  clickhouse:
+    volumes: !override
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+      - ${HS_CLICKHOUSE_BIN:?}:/usr/bin/clickhouse:ro
+      - ${HS_SKIP_CHECKSUM_XML:?}:/etc/clickhouse-server/config.d/zz-skip-checksum.xml:ro

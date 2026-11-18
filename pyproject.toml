@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "harborstack"
+version = "0.1.0"
+description = "Harbor 评测产物到 Langfuse 的可复现集成栈"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "ivanbao9783" }]
+keywords = ["harbor", "langfuse", "opentelemetry", "observability", "evaluation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "tomli>=2.0; python_version < '3.11'",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+harborstack = "harborstack.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ivanbao9783/harbor-otel-stack"
+Repository = "https://github.com/ivanbao9783/harbor-otel-stack"
+Issues = "https://github.com/ivanbao9783/harbor-otel-stack/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/harborstack"]
+artifacts = ["src/harborstack/patch/ptrace_sigill.c"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

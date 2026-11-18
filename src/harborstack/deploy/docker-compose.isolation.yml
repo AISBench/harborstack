@@ -1,0 +1,96 @@
+# ============================================================
+# harborstack 隔离层：叠加在上游 langfuse/docker-compose.yml 之上
+# 所有可变值都来自 --env-file 渲染出的 var/.env（HS_* 变量）
+#
+# 这一层只做四件事，不改任何 Langfuse 业务语义：
+#   1. 镜像换成锁定的 digest（配合镜像代理前缀）
+#   2. 端口全部绑 127.0.0.1，并改为分配器给出的主机端口
+#   3. 加资源上限与 restart: "no"（共享机器上不抢占、不随重启拉起）
+#   4. ClickHouse 挂载穿刺后的二进制（Kunpeng 无 RCpc 时的必需项）
+# ============================================================
+services:
+  langfuse-web:
+    image: ${HS_IMAGE_LANGFUSE:?}
+    restart: "no"
+    labels: &labels
+      io.harborstack: "1"
+    ports: !override
+      - "127.0.0.1:${HS_PORT_WEB:?}:3000"
+    mem_limit: ${HS_MEM_LANGFUSE:-2g}
+    cpus: ${HS_CPUS_LANGFUSE:-2.0}
+
+  langfuse-worker:
+    image: ${HS_IMAGE_LANGFUSE_WORKER:?}
+    restart: "no"
+    labels: *labels
+    ports: !override
+      - "127.0.0.1:${HS_PORT_WORKER:?}:3030"
+    mem_limit: ${HS_MEM_LANGFUSE:-2g}
+    cpus: ${HS_CPUS_LANGFUSE:-2.0}
+
+  # 上游用的是标准 tag 镜像，本机镜像代理上该 tag 会反复卡死，改用同版本
+  # alpine 变体。alpine 内是 busybox wget，不支持 --spider，健康检查改写。
+  # Kunpeng 920 无 RCpc，官方 aarch64 构建在 jemalloc 首次分配即 SIGILL，
+  # 因此挂载穿刺版二进制（LDAPR* -> LDAR*，内存序更强，正确性安全），
+  # 并关闭 ClickHouse 对可执行文件的自校验。
+  clickhouse:
+    image: ${HS_IMAGE_CLICKHOUSE:?}
+    restart: "no"
+    labels: *labels
+    volumes: !override
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    ports: !override
+      - "127.0.0.1:${HS_PORT_CH_HTTP:?}:8123"
+      - "127.0.0.1:${HS_PORT_CH_NATIVE:?}:9000"
+    healthcheck: !override
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+    mem_limit: ${HS_MEM_CLICKHOUSE:-4g}
+    cpus: ${HS_CPUS_CLICKHOUSE:-2.0}
+
+  # 官方 cgr.dev/chainguard/minio 在本机不可达，换 bitnami 镜像。
+  # bitnami 默认以非 root 运行，写不了 root 拥有的命名卷，因此以 root 启动
+  # 并自行创建 langfuse 桶目录后再拉起 minio。
+  minio:
+    image: ${HS_IMAGE_MINIO:?}
+    restart: "no"
+    labels: *labels
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mkdir -p /data/langfuse
+        exec /opt/bitnami/minio/bin/minio server --address ":9000" --console-address ":9001" /data
+    ports: !override
+      - "127.0.0.1:${HS_PORT_MINIO_API:?}:9000"
+      - "127.0.0.1:${HS_PORT_MINIO_CONSOLE:?}:9001"
+    healthcheck: !override
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    mem_limit: ${HS_MEM_MINIO:-1g}
+    cpus: ${HS_CPUS_MINIO:-1.0}
+
+  redis:
+    image: ${HS_IMAGE_REDIS:?}
+    restart: "no"
+    labels: *labels
+    ports: !override
+      - "127.0.0.1:${HS_PORT_REDIS:?}:6379"
+    mem_limit: ${HS_MEM_REDIS:-512m}
+    cpus: ${HS_CPUS_REDIS:-1.0}
+
+  postgres:
+    image: ${HS_IMAGE_POSTGRES:?}
+    restart: "no"
+    labels: *labels
+    ports: !override
+      - "127.0.0.1:${HS_PORT_POSTGRES:?}:5432"
+    mem_limit: ${HS_MEM_POSTGRES:-1g}
+    cpus: ${HS_CPUS_POSTGRES:-1.0}

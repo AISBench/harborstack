@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "note": "由当前实现实测固化；改变转换逻辑需同步更新并说明原因",
+  "fixtures": {
+    "atif-fidelity": {
+      "trial": "path-tracing-reverse__N5FYxHG",
+      "trace_id": 120140542623244320675378506647471142196,
+      "reward": 1.0,
+      "spans": 101,
+      "counts": {
+        "root": 1,
+        "generation": 47,
+        "tool": 53
+      },
+      "durations": {
+        "root": 610.621,
+        "generation": 605.818,
+        "tool": 714.457
+      },
+      "root_s": 610.621,
+      "negative": 0,
+      "clamped": 0,
+      "outside_root": 0,
+      "levels": {
+        "DEFAULT": 101
+      }
+    },
+    "atif-error": {
+      "trial": "path-tracing-reverse__CmFT8TK",
+      "trace_id": 146920914071465208393801221333776712705,
+      "reward": 0.0,
+      "spans": 2,
+      "counts": {
+        "root": 1,
+        "generation": 1
+      },
+      "durations": {
+        "root": 0.0,
+        "generation": 0.0
+      },
+      "root_s": 0.0,
+      "negative": 0,
+      "clamped": 0,
+      "outside_root": 0,
+      "levels": {
+        "ERROR": 2
+      },
+      "exception": {
+        "type": "NonZeroAgentExitCodeError"
+      },
+      "error": {
+        "scope": "trial",
+        "source": "harbor_result",
+        "status_message_prefix": "NonZeroAgentExitCodeError: jiuwenswarm run failed (status='f"
+      }
+    }
+  }
+}

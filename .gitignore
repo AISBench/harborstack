@@ -1,0 +1,27 @@
+# 运行期产物与缓存
+var/
+*.log
+# display 每次运行重写的报告，固定输入见 fixtures/expected.json
+fixtures/*/report.json
+
+# 虚拟环境与打包产物
+.venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 大件二进制与离线包：只留在本地或 bundle 目录
+*.tar
+*.tar.zst
+bundle/
+
+# 编辑器与操作系统
+.idea/
+.vscode/
+.ruff_cache/
+Thumbs.db
+desktop.ini
+.DS_Store
