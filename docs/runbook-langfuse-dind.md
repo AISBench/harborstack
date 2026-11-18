@@ -24,7 +24,7 @@ dind 路径适用于：
 先跑网络预检：
 
 ```bash
-cd ~/code/harbor-otel-stack
+cd ~/code/harborstack
 scripts/dind/check-host-network.sh
 ```
 
@@ -43,16 +43,16 @@ scripts/dind/check-host-network.sh
   - Python ≥3.12（建议 3.13）
 - 当前用户在 `docker` 组，能够运行 `--privileged` 容器（dind 需要）。
 - 目录：
-  - harborstack：`~/code/harbor-otel-stack`
+  - harborstack：`~/code/harborstack`
   - harbor：`~/code/harbor`
 - 磁盘：harbor 运行时 venv 约 211M，dind 内镜像约 4G，加上数据卷，建议预留 ≥30G。
-- 需要 git 来 clone/更新 `harbor-otel-stack` 和 `harbor`；安装见 [runbook-toolchain.md](runbook-toolchain.md) §5。
+- 需要 git 来 clone/更新 `harborstack` 和 `harbor`；安装见 [runbook-toolchain.md](runbook-toolchain.md) §5。
 
 ### 1.1 代码位置
 
 默认路径：
 
-- harborstack：`~/code/harbor-otel-stack`（本仓库）
+- harborstack：`~/code/harborstack`（本仓库）
 - harbor：`~/code/harbor`
 
 如果 harbor 在别处：
@@ -103,14 +103,14 @@ df -h ~                     # 建议 >=30G 可用
 ## 2. 准备 harborstack venv
 
 ```bash
-cd ~/code/harbor-otel-stack
+cd ~/code/harborstack
 scripts/dind/setup-stack-venv.sh
 ```
 
 验证：
 
 ```bash
-ls ~/code/harbor-otel-stack/.venv/bin/harborstack
+ls ~/code/harborstack/.venv/bin/harborstack
 ```
 
 > `up.sh` 只负责 Langfuse 栈，不准备 harbor；harbor 工作区是下面独立的 2.5 步。
@@ -132,7 +132,7 @@ ls ~/code/harbor-otel-stack/.venv/bin/harborstack
 然后准备 venv：
 
 ```bash
-cd ~/code/harbor-otel-stack
+cd ~/code/harborstack
 scripts/dind/setup-harbor.sh
 # 需要 harbor 开发/云适配器时用完整环境（约 8.2G）：
 # scripts/dind/setup-harbor.sh --full
@@ -156,7 +156,7 @@ scripts/dind/setup-harbor.sh
 ## 3. 启动 dind
 
 ```bash
-cd ~/code/harbor-otel-stack
+cd ~/code/harborstack
 scripts/dind/start-dind.sh
 ```
 
@@ -204,7 +204,7 @@ Use:
 （这一步只拉镜像，不创建任何容器）：
 
 ```bash
-cd ~/code/harbor-otel-stack
+cd ~/code/harborstack
 unset DOCKER_HOST          # 这一步必须操作宿主机 Docker,不能用 dind
 export HARBORSTACK_IMAGE__MIRROR=docker.m.daocloud.io
 .venv/bin/harborstack install
@@ -281,7 +281,7 @@ Langfuse   http://localhost:18930
 ## 6. 验证
 
 ```bash
-cd ~/code/harbor-otel-stack
+cd ~/code/harborstack
 export DOCKER_HOST=tcp://127.0.0.1:23750
 export HARBORSTACK_IMAGE__MIRROR=docker.m.daocloud.io
 

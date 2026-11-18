@@ -25,7 +25,7 @@
 - 本地数据集，或可访问的 registry 数据集。
   - `-p /path/to/tasks`：本地 task/数据集目录。
   - `-d org/dataset`：registry 数据集。
-- git 是环境前置条件：clone/更新 `harbor-otel-stack` 和 `harbor`，以及
+- git 是环境前置条件：clone/更新 `harborstack` 和 `harbor`，以及
   使用 registry 数据集都需要它。
 
 ## 1. 先 dry-run
@@ -48,7 +48,7 @@ uv run harborstack run --dry-run -- run \
 
 ```bash
 unset DOCKER_HOST
-cd /path/to/harbor-otel-stack
+cd /path/to/harborstack
 
 uv run harborstack run -- run \
   -p /path/to/tasks/TASK_NAME \

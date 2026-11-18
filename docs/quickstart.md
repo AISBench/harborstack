@@ -7,7 +7,7 @@
 
 - Linux 机器，已有 Docker Engine，当前用户在 `docker` 组。
 - `docker compose` ≥ 2.24.4、`uv`、Python ≥ 3.12、`git`。
-  - git 用于 clone/更新 `harbor-otel-stack` 和 `harbor`，以及 registry 数据集。
+  - git 用于 clone/更新 `harborstack` 和 `harbor`，以及 registry 数据集。
   - 缺工具看 [runbook-toolchain.md](runbook-toolchain.md)。
 - 磁盘建议 ≥ 30G。
 - Harbor 工作区默认 `~/code/harbor`；不在这个路径时，二选一：
@@ -30,7 +30,7 @@
 先进入仓库根目录：
 
 ```bash
-cd /path/to/harbor-otel-stack
+cd /path/to/harborstack
 ```
 
 | 场景 | 建议 |
@@ -120,7 +120,7 @@ scripts/dind/setup-harbor.sh
 
 ```bash
 unset DOCKER_HOST
-cd /path/to/harbor-otel-stack
+cd /path/to/harborstack
 export DEEPSEEK_API_KEY=...
 
 uv run harborstack run -- run \

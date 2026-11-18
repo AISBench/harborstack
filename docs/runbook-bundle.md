@@ -35,7 +35,7 @@ harborstack-aarch64-runtime/
 前提：本机已经成功执行过 `init`（镜像、补丁产物都在本地）。
 
 ```bash
-cd /path/to/harbor-otel-stack
+cd /path/to/harborstack
 .venv/bin/harborstack bundle create \
   --out bundles/harborstack-$(uname -m)-runtime --mode full
 .venv/bin/harborstack bundle verify bundles/harborstack-$(uname -m)-runtime
@@ -100,7 +100,7 @@ tar --zstd -xf harborstack-aarch64-runtime.tar.zst
 解包后应直接得到 `harborstack-aarch64-runtime/`，不需要改名。再校验一次包内文件：
 
 ```bash
-cd /path/to/harbor-otel-stack
+cd /path/to/harborstack
 .venv/bin/harborstack bundle verify ~/restore/4.70.1/harborstack-aarch64-runtime
 ```
 
